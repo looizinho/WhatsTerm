@@ -1,0 +1,25 @@
+{
+  "name": "whatsterm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.3.0",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "pino": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "prisma": "^7.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@10.28.2"
+}
