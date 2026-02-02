@@ -36,3 +36,11 @@ It ingests incoming messages, persists events, routes actions, and will later in
 - Type safety is mandatory
 - Handle null/undefined inputs safely
 - Avoid side effects outside the assigned scope
+
+# Git rules (mandatory)
+
+- Never commit directly to the main branch
+- Always create a feature branch before making changes
+- Always commit changes before stopping
+- If GitHub CLI (gh) is available, open a Pull Request automatically
+- If a Pull Request cannot be opened, inform the user explicitly

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { startWhatsApp } from "./whatsapp/baileys.js";
 
 // Start the WhatsApp ingestion service when the application runs.
