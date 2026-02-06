@@ -2,7 +2,7 @@
  * WhatsApp ingestion using Baileys.
  *
  * Listens for incoming messages, extracts sender, text, timestamp and the raw payload.
- * Persists each conversation and message using Prisma (mock for now).
+ * Persists each conversation and message using MongoDB.
  * Non-text messages are stored with `null` text and full raw payload.
  * Each received message is logged to the console.
  */
@@ -15,19 +15,24 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 
 import qrcode from "qrcode-terminal";
+import { ObjectId } from "mongodb";
 
-// Prisma mock for demonstration
-const prisma = {
-  conversation: {
-    async upsert(_args: any) {
-      return { id: 1 };
-    },
-  },
-  message: {
-    async create({ data }: any) {
-      console.log("[Prisma mock] Message stored", data);
-    },
-  },
+import { getDb } from "../db/mongo.js";
+
+type ConversationDocument = {
+  _id: ObjectId;
+  from: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type MessageDocument = {
+  conversationId: ObjectId;
+  direction: "incoming" | "outgoing";
+  text: string | null;
+  rawPayload: unknown;
+  timestamp: Date;
+  createdAt: Date;
 };
 
 export async function startWhatsApp(): Promise<WASocket> {
@@ -111,19 +116,31 @@ export async function startWhatsApp(): Promise<WASocket> {
 
         console.log(`[WhatsApp] From: ${remoteJid} Text: ${text ?? "<non-text>"} Timestamp: ${timestamp.toISOString()}`);
 
-        const conversation = await prisma.conversation.upsert({
-          where: { from: remoteJid },
-          update: {},
-          create: { from: remoteJid },
-        });
+        const db = await getDb();
+        const conversations = db.collection<ConversationDocument>("conversations");
+        const messages = db.collection<MessageDocument>("messages");
 
-        await prisma.message.create({
-          data: {
-            conversationId: conversation.id,
-            direction: "incoming",
-            text: typeof text === "string" ? text : null,
-            rawPayload: JSON.stringify(msg),
+        const now = new Date();
+        const conversationResult = await conversations.findOneAndUpdate(
+          { from: remoteJid },
+          {
+            $set: { updatedAt: now },
+            $setOnInsert: { from: remoteJid, createdAt: now },
           },
+          { upsert: true, returnDocument: "after" },
+        );
+
+        if (!conversationResult.value) {
+          throw new Error("Failed to upsert conversation.");
+        }
+
+        await messages.insertOne({
+          conversationId: conversationResult.value._id,
+          direction: "incoming",
+          text: typeof text === "string" ? text : null,
+          rawPayload: msg,
+          timestamp,
+          createdAt: now,
         });
       } catch (e) {
         console.error("Error processing incoming WhatsApp message:", e);
