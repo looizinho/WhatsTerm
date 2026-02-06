@@ -130,12 +130,18 @@ export async function startWhatsApp(): Promise<WASocket> {
           { upsert: true, returnDocument: "after" },
         );
 
-        if (!conversationResult.value) {
-          throw new Error("Failed to upsert conversation.");
+        let conversation = conversationResult.value;
+        if (!conversation) {
+          // Fallback for drivers or cases where upserted docs aren't returned.
+          conversation = await conversations.findOne({ from: remoteJid });
+        }
+
+        if (!conversation) {
+          throw new Error(`Failed to upsert conversation for ${remoteJid}.`);
         }
 
         await messages.insertOne({
-          conversationId: conversationResult.value._id,
+          conversationId: conversation._id,
           direction: "incoming",
           text: typeof text === "string" ? text : null,
           rawPayload: msg,
